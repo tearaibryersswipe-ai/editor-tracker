@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 const EDITORS = ["Select editor...", "Geoff", "T", "Nicket"];
 const CAMPAIGNS = ["Select campaign...", "REGEN", "Peak Height", "Aura", "Other"];
-const RATE_PER_VIDEO = 5; // USD — change this to your actual per-video rate
 const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
+const RATE_PER_VIDEO = 5;
+
 const STATUS_COLORS = {
   "In Review": { bg: "#1a2a3a", text: "#4da6ff", border: "#1e3a5a" },
   "Revisions": { bg: "#2a1a0a", text: "#ff9f4a", border: "#3a2a0a" },
@@ -30,9 +31,10 @@ export default function EditorTracker() {
   const [videos, setVideos] = useState([]);
   const [view, setView] = useState("upload");
   const [dragging, setDragging] = useState(false);
-  const [form, setForm] = useState({ editor: "", campaign: "", title: "", file: null });
+  const [form, setForm] = useState({ editor: "", creator: "", campaign: "", title: "", file: null });
   const [submitted, setSubmitted] = useState(false);
   const [toast, setToast] = useState(null);
+  const [filterCreator, setFilterCreator] = useState("All");
   const fileRef = useRef();
 
   useEffect(() => {
@@ -61,6 +63,7 @@ export default function EditorTracker() {
 
   const handleSubmit = () => {
     if (!form.editor || form.editor === "Select editor..." ||
+        !form.creator || form.creator === "Select creator..." ||
         !form.campaign || form.campaign === "Select campaign..." ||
         !form.title || !form.file) {
       showToast("Please fill in all fields and upload a file.", "error");
@@ -69,6 +72,7 @@ export default function EditorTracker() {
     const entry = {
       id: Date.now(),
       editor: form.editor,
+      creator: form.creator,
       campaign: form.campaign,
       title: form.title,
       fileName: form.file.name,
@@ -80,7 +84,7 @@ export default function EditorTracker() {
       paid: false,
     };
     save([entry, ...videos]);
-    setForm({ editor: "", campaign: "", title: "", file: null });
+    setForm({ editor: "", creator: "", campaign: "", title: "", file: null });
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   };
@@ -101,6 +105,7 @@ export default function EditorTracker() {
     if (v.status === "Revisions") editorSummary[v.editor].revisions++;
   });
 
+  const filteredVideos = filterCreator === "All" ? videos : videos.filter(v => v.creator === filterCreator);
   const inReviewAll = videos.filter(v => v.status === "In Review");
 
   const s = {
@@ -127,8 +132,8 @@ export default function EditorTracker() {
     payRow: { display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: "1px solid #1a1a1a", marginTop: 12 },
     payAmount: { fontSize: 22, fontWeight: 800, color: "#e8e4dc" },
     badge: (color) => ({ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: `${color}15`, color, border: `1px solid ${color}30` }),
-    statusPill: (status) => ({ display: "inline-block", padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", background: STATUS_COLORS[status]?.bg || "#1a1a1a", color: STATUS_COLORS[status]?.text || "#888", border: `1px solid ${STATUS_COLORS[status]?.border || "#222"}` }),
     toast: (type) => ({ position: "fixed", bottom: 24, right: 24, background: type === "error" ? "#2a0a0a" : "#0a2a1a", border: `1px solid ${type === "error" ? "#5a1a1a" : "#1a5a3a"}`, color: type === "error" ? "#ff6b6b" : "#4aff9f", padding: "14px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600, zIndex: 999 }),
+    filterBtn: (active) => ({ padding: "6px 14px", borderRadius: 6, border: `1px solid ${active ? "#e8e4dc" : "#222"}`, cursor: "pointer", fontSize: 11, fontWeight: 600, background: active ? "#e8e4dc" : "transparent", color: active ? "#0d0d0d" : "#555", transition: "all 0.15s" }),
   };
 
   return (
@@ -172,16 +177,24 @@ export default function EditorTracker() {
                     </select>
                   </div>
                   <div style={s.col}>
+                    <label style={s.label}>Creator</label>
+                    <select style={s.select} value={form.creator} onChange={e => setForm(f => ({ ...f, creator: e.target.value }))}>
+                      {CREATORS.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={s.row}>
+                  <div style={s.col}>
                     <label style={s.label}>Campaign</label>
                     <select style={s.select} value={form.campaign} onChange={e => setForm(f => ({ ...f, campaign: e.target.value }))}>
                       {CAMPAIGNS.map(c => <option key={c}>{c}</option>)}
                     </select>
                   </div>
-                </div>
-
-                <div style={{ marginBottom: 20 }}>
-                  <label style={s.label}>Video title</label>
-                  <input style={s.input} placeholder="e.g. REGEN_Week1_TeArai_v1" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+                  <div style={s.col}>
+                    <label style={s.label}>Video title</label>
+                    <input style={s.input} placeholder="e.g. REGEN_Week1_TeArai_v1" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
@@ -218,9 +231,16 @@ export default function EditorTracker() {
 
         {view === "tracker" && (
           <div>
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Video tracker</div>
-              <div style={{ fontSize: 13, color: "#555" }}>Review submissions, leave feedback, and update statuses.</div>
+            <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Video tracker</div>
+                <div style={{ fontSize: 13, color: "#555" }}>Review submissions, leave feedback, and update statuses.</div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {["All", "Te Arai", "Lucas"].map(c => (
+                  <button key={c} style={s.filterBtn(filterCreator === c)} onClick={() => setFilterCreator(c)}>{c}</button>
+                ))}
+              </div>
             </div>
 
             {inReviewAll.length > 0 && (
@@ -229,7 +249,7 @@ export default function EditorTracker() {
               </div>
             )}
 
-            {videos.length === 0 ? (
+            {filteredVideos.length === 0 ? (
               <div style={{ ...s.card, textAlign: "center", padding: "48px 28px", color: "#333" }}>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>📭</div>
                 <div style={{ fontSize: 14 }}>No videos submitted yet</div>
@@ -237,7 +257,7 @@ export default function EditorTracker() {
             ) : (
               <>
                 {["In Review", "Revisions", "Approved", "Completed"].map(status => {
-                  const group = videos.filter(v => v.status === status);
+                  const group = filteredVideos.filter(v => v.status === status);
                   if (group.length === 0) return null;
                   return (
                     <div key={status} style={{ marginBottom: 32 }}>
@@ -249,6 +269,7 @@ export default function EditorTracker() {
                               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{v.title}</div>
                               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                                 <span style={s.badge("#888")}>{v.editor}</span>
+                                <span style={s.badge("#4da6ff")}>{v.creator}</span>
                                 <span style={s.badge("#666")}>{v.campaign}</span>
                                 <span style={{ fontSize: 11, color: "#444" }}>{formatDate(v.submittedAt)}</span>
                                 {v.revisions > 0 && <span style={s.badge("#ff9f4a")}>{v.revisions} revision{v.revisions > 1 ? "s" : ""}</span>}
