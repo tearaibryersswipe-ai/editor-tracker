@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const EDITORS = ["Select editor...", "Geoff", "T", "Nicket"];
 const CAMPAIGNS = ["Select campaign...", "REGEN", "Peak Height", "Aura", "Other"];
 const RATE_PER_VIDEO = 5; // USD — change this to your actual per-video rate
-
+const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
 const STATUS_COLORS = {
   "In Review": { bg: "#1a2a3a", text: "#4da6ff", border: "#1e3a5a" },
   "Revisions": { bg: "#2a1a0a", text: "#ff9f4a", border: "#3a2a0a" },
