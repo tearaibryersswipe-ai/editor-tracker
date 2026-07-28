@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const EDITORS = ["Select editor...", "Geoff", "Nicket"];
+const EDITORS = ["Select editor...", "Geoff", "T", "Nicket"];
 const CAMPAIGNS = ["Select campaign...", "REGEN", "Peak Height", "Aura", "Other"];
 const RATE_PER_VIDEO = 5; // USD — change this to your actual per-video rate
 
