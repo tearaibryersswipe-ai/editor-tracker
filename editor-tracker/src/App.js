@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const EDITORS = ["Select editor...", "Geoff", "Nicket"];
+const EDITORS = ["Select editor...", "Geoff", "Carla", "Nicket"];
 const CAMPAIGNS = ["Select campaign...", "REGEN", "Peak Height", "ReCreate", "Other"];
 const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
 const RATE_PER_VIDEO = 5;
