@@ -6,11 +6,14 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Admin emails — add yours here
 const ADMIN_EMAILS = ["tearaibryers@gmail.com"];
 
 const CAMPAIGNS = ["Select campaign...", "REGEN", "Peak Height", "ReCreate", "ROAST"];
 const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
+const VIDEO_TYPES = ["Select type...", "Original", "Repost edit"];
 const RATE_PER_VIDEO = 5;
+const RATE_REPOST = 2.50;
 
 const STATUS_OPTIONS = ["In Review", "Revisions", "Approved", "Completed"];
 
@@ -27,8 +30,10 @@ function formatDate(ts) {
   return new Date(ts).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// ─── Auth Screen ────────────────────────────────────────────────────────────
+
 function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState("login"); // login | signup
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -106,19 +111,22 @@ function AuthScreen({ onAuth }) {
   );
 }
 
+// ─── Main App ────────────────────────────────────────────────────────────────
+
 export default function EditorTracker() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [videos, setVideos] = useState([]);
   const [view, setView] = useState("upload");
   const [dragging, setDragging] = useState(false);
-  const [form, setForm] = useState({ creator: "", campaign: "", title: "", file: null });
+  const [form, setForm] = useState({ creator: "", campaign: "", title: "", video_type: "", file: null });
   const [submitted, setSubmitted] = useState(false);
   const [toast, setToast] = useState(null);
   const [filterCreator, setFilterCreator] = useState("All");
   const [loading, setLoading] = useState(true);
   const fileRef = useRef();
 
+  // Check session on mount
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -139,6 +147,7 @@ export default function EditorTracker() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Fetch videos from Supabase
   const fetchVideos = useCallback(async () => {
     if (!user) return;
     let query = supabase.from("submissions").select("*").order("created_at", { ascending: false });
@@ -151,6 +160,7 @@ export default function EditorTracker() {
 
   useEffect(() => { fetchVideos(); }, [fetchVideos]);
 
+  // Real-time subscription
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -175,6 +185,7 @@ export default function EditorTracker() {
   const handleSubmit = async () => {
     if (!form.creator || form.creator === "Select creator..." ||
         !form.campaign || form.campaign === "Select campaign..." ||
+        !form.video_type || form.video_type === "Select type..." ||
         !form.title || !form.file) {
       showToast("Please fill in all fields and upload a file.", "error");
       return;
@@ -186,12 +197,13 @@ export default function EditorTracker() {
       creator: form.creator,
       campaign: form.campaign,
       title: form.title,
+      video_type: form.video_type,
       status: "In Review",
       feedback: "",
       paid: false,
     }]);
     if (error) { showToast("Submission failed. Try again.", "error"); return; }
-    setForm({ creator: "", campaign: "", title: "", file: null });
+    setForm({ creator: "", campaign: "", title: "", video_type: "", file: null });
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
     fetchVideos();
@@ -215,9 +227,10 @@ export default function EditorTracker() {
   const thisWeek = videos.filter(v => new Date(v.created_at) >= weekStart);
   const editorSummary = {};
   thisWeek.forEach(v => {
-    if (!editorSummary[v.editor_name]) editorSummary[v.editor_name] = { total: 0, completed: 0, inReview: 0, revisions: 0, unpaid: 0 };
+    if (!editorSummary[v.editor_name]) editorSummary[v.editor_name] = { total: 0, completed: 0, inReview: 0, revisions: 0, unpaidAmount: 0 };
     editorSummary[v.editor_name].total++;
-    if (v.status === "Completed") { editorSummary[v.editor_name].completed++; if (!v.paid) editorSummary[v.editor_name].unpaid++; }
+    const rate = v.video_type === "Repost edit" ? RATE_REPOST : RATE_PER_VIDEO;
+    if (v.status === "Completed") { editorSummary[v.editor_name].completed++; if (!v.paid) editorSummary[v.editor_name].unpaidAmount += rate; }
     if (v.status === "In Review") editorSummary[v.editor_name].inReview++;
     if (v.status === "Revisions") editorSummary[v.editor_name].revisions++;
   });
@@ -256,6 +269,7 @@ export default function EditorTracker() {
     adminBadge: { fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#4da6ff", background: "#1a2a3a", border: "1px solid #1e3a5a", borderRadius: 4, padding: "2px 8px", marginLeft: 8, textTransform: "uppercase" },
   };
 
+  // Editor-only nav tabs (no Pay Summary for editors)
   const navTabs = isAdmin
     ? [["upload", "Upload"], ["tracker", "Tracker"], ["summary", "Pay Summary"]]
     : [["upload", "Upload"], ["tracker", "My Submissions"]];
@@ -282,6 +296,7 @@ export default function EditorTracker() {
 
       <div style={s.main}>
 
+        {/* ── Upload Tab ── */}
         {view === "upload" && (
           <div>
             <div style={{ marginBottom: 32 }}>
@@ -297,6 +312,7 @@ export default function EditorTracker() {
               </div>
             ) : (
               <div style={s.card}>
+                {/* Editor name auto-filled from login */}
                 <div style={{ marginBottom: 16, padding: "12px 14px", background: "#0d0d0d", border: "1px solid #222", borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: "#444", marginBottom: 2, letterSpacing: "0.08em", textTransform: "uppercase" }}>Submitting as</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#e8e4dc" }}>{editorName}</div>
@@ -317,9 +333,18 @@ export default function EditorTracker() {
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={s.label}>Video title</label>
-                  <input style={s.input} placeholder="e.g. REGEN_Week1_TeArai_v1" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+                <div style={s.row}>
+                  <div style={s.col}>
+                    <label style={s.label}>Video title</label>
+                    <input style={s.input} placeholder="e.g. REGEN_Week1_TeArai_v1" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+                  </div>
+                  <div style={s.col}>
+                    <label style={s.label}>Video type</label>
+                    <select style={s.select} value={form.video_type} onChange={e => setForm(f => ({ ...f, video_type: e.target.value }))}>
+                      {VIDEO_TYPES.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                    <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>Original = $5.00 · Repost edit = $2.50</div>
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
@@ -354,6 +379,7 @@ export default function EditorTracker() {
           </div>
         )}
 
+        {/* ── Tracker Tab ── */}
         {view === "tracker" && (
           <div>
             <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
@@ -400,12 +426,16 @@ export default function EditorTracker() {
                                 <span style={s.badge("#888")}>{v.editor_name}</span>
                                 <span style={s.badge("#4da6ff")}>{v.creator}</span>
                                 <span style={s.badge("#666")}>{v.campaign}</span>
+                                <span style={s.badge(v.video_type === "Repost edit" ? "#a09fff" : "#4aff9f")}>{v.video_type || "Original"}</span>
                                 <span style={{ fontSize: 11, color: "#444" }}>{formatDate(v.created_at)}</span>
                               </div>
                             </div>
                             {isAdmin && (
                               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                <select style={s.statusSelect} value={v.status} onChange={e => updateVideo(v.id, { status: e.target.value })}>
+                                <select style={s.statusSelect} value={v.status} onChange={e => {
+                                  const changes = { status: e.target.value };
+                                  updateVideo(v.id, changes);
+                                }}>
                                   {STATUS_OPTIONS.map(st => <option key={st}>{st}</option>)}
                                 </select>
                                 {v.status === "Completed" && (
@@ -421,6 +451,7 @@ export default function EditorTracker() {
                               </div>
                             )}
                           </div>
+                          {/* Feedback — editable by admin, read-only for editors */}
                           <div>
                             <div style={{ fontSize: 11, color: "#444", marginBottom: 4 }}>Feedback</div>
                             {isAdmin ? (
@@ -441,6 +472,7 @@ export default function EditorTracker() {
           </div>
         )}
 
+        {/* ── Pay Summary Tab (Admin only) ── */}
         {view === "summary" && isAdmin && (
           <div>
             <div style={{ marginBottom: 32 }}>
@@ -466,7 +498,7 @@ export default function EditorTracker() {
                       </div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                      {[["Total submitted", data.total], ["Completed", data.completed], ["Unpaid", data.unpaid]].map(([label, val]) => (
+                      {[["Total submitted", data.total], ["Completed", data.completed], ["Unpaid amount", `$${data.unpaidAmount.toFixed(2)}`]].map(([label, val]) => (
                         <div key={label} style={{ background: "#111", borderRadius: 8, padding: "12px 14px" }}>
                           <div style={{ fontSize: 11, color: "#444", marginBottom: 4 }}>{label}</div>
                           <div style={{ fontSize: 20, fontWeight: 800 }}>{val}</div>
@@ -476,7 +508,7 @@ export default function EditorTracker() {
                     <div style={s.payRow}>
                       <div>
                         <div style={{ fontSize: 11, color: "#444", marginBottom: 2 }}>Amount owed this week</div>
-                        <div style={s.payAmount}>${data.unpaid * RATE_PER_VIDEO} USD</div>
+                        <div style={s.payAmount}>${data.unpaidAmount.toFixed(2)} USD</div>
                       </div>
                       <button onClick={async () => {
                         const toUpdate = videos.filter(v => v.editor_name === editor && v.status === "Completed" && !v.paid);
@@ -494,9 +526,9 @@ export default function EditorTracker() {
 
                 <div style={{ ...s.card, marginTop: 24 }}>
                   <div style={{ fontSize: 11, color: "#444", marginBottom: 4, letterSpacing: "0.1em", textTransform: "uppercase" }}>Total payout this week</div>
-                  <div style={{ fontSize: 32, fontWeight: 800 }}>${Object.values(editorSummary).reduce((sum, d) => sum + d.unpaid * RATE_PER_VIDEO, 0)} USD</div>
+                  <div style={{ fontSize: 32, fontWeight: 800 }}>${Object.values(editorSummary).reduce((sum, d) => sum + d.unpaidAmount, 0).toFixed(2)} USD</div>
                   <div style={{ fontSize: 12, color: "#444", marginTop: 4 }}>
-                    {Object.values(editorSummary).reduce((sum, d) => sum + d.unpaid, 0)} unpaid completed videos across all editors
+                    Across all editors this week
                   </div>
                 </div>
               </>
