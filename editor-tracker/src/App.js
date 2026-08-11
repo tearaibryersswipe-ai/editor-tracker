@@ -8,7 +8,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const ADMIN_EMAILS = ["tearaibryers@gmail.com"];
 
-const CAMPAIGNS = ["Select campaign...", "REGEN", "Peak Height", "ReCreate", "Other"];
+const CAMPAIGNS = ["Select campaign...", "REGEN", "Peak Height", "ReCreate", "ROAST"];
 const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
 const RATE_PER_VIDEO = 5;
 
