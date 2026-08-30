@@ -15,7 +15,7 @@ const VIDEO_TYPES = ["Select type...", "Original", "Repost edit"];
 const RATE_PER_VIDEO = 5;
 const RATE_REPOST = 2.50;
 
-const STATUS_OPTIONS = ["Completed"];
+const STATUS_OPTIONS = ["Approved", "Completed"];
 
 function getWeekStart() {
   const now = new Date();
