@@ -9,13 +9,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Admin emails — add yours here
 const ADMIN_EMAILS = ["tearaibryers@gmail.com"];
 
-const CAMPAIGNS = ["Select campaign...", "Result", "Peak Height", "ReCreate", "FOLK", "ROAST"];
+const CAMPAIGNS = ["Select campaign...", "Result", "Peak Height", "DARE", "FOLK", "ROAST"];
 const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
 const VIDEO_TYPES = ["Select type...", "Original", "Repost edit"];
 const RATE_PER_VIDEO = 5;
 const RATE_REPOST = 2.50;
 
-const STATUS_OPTIONS = ["In Review", "Revisions", "Approved", "Completed"];
+const STATUS_OPTIONS = ["Completed"];
 
 function getWeekStart() {
   const now = new Date();
