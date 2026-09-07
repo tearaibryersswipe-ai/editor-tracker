@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Admin emails — add yours here
-const ADMIN_EMAILS = ["tearaibryers@gmail.com"];
+const ADMIN_EMAILS = ["tearaibryers@gmail.com", "lucasmaxgraham@gmail.com"];
 
 const CAMPAIGNS = ["Select campaign...", "Result", "Peak Height", "Recreate (OLD)", "DARE", "FOLK", "ROAST"];
 const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
