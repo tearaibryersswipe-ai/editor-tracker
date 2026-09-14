@@ -6,12 +6,11 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Admin emails — add yours here
 const ADMIN_EMAILS = ["tearaibryers@gmail.com", "lucasmaxgraham@gmail.com"];
 
 const CAMPAIGNS = ["Select campaign...", "Result", "Peak Height", "Areum", "DARE", "FOLK", "ROAST"];
 const CREATORS = ["Select creator...", "Te Arai", "Lucas"];
-const VIDEO_TYPES = ["Select type...", "Original", "Repost edit"];
+const VIDEO_TYPES = ["Select type...", "Original", "Repost edit", "Personal Branding"];
 const RATE_PER_VIDEO = 5;
 const RATE_REPOST = 2.50;
 
@@ -30,10 +29,35 @@ function formatDate(ts) {
   return new Date(ts).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function getVideoCardStyle(videoType) {
+  if (videoType === "Personal Branding") {
+    return {
+      background: "#1a0d00",
+      border: "1px solid #FF5C00",
+      borderRadius: 10,
+      padding: "18px 20px",
+      marginBottom: 12,
+    };
+  }
+  return {
+    background: "#0d0d0d",
+    border: "1px solid #1a1a1a",
+    borderRadius: 10,
+    padding: "18px 20px",
+    marginBottom: 12,
+  };
+}
+
+function getVideoBadgeColor(videoType) {
+  if (videoType === "Repost edit") return "#a09fff";
+  if (videoType === "Personal Branding") return "#FF5C00";
+  return "#4aff9f";
+}
+
 // ─── Auth Screen ────────────────────────────────────────────────────────────
 
 function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login"); // login | signup
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -126,7 +150,6 @@ export default function EditorTracker() {
   const [loading, setLoading] = useState(true);
   const fileRef = useRef();
 
-  // Check session on mount
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -147,7 +170,6 @@ export default function EditorTracker() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch videos from Supabase
   const fetchVideos = useCallback(async () => {
     if (!user) return;
     let query = supabase.from("submissions").select("*").order("created_at", { ascending: false });
@@ -160,7 +182,6 @@ export default function EditorTracker() {
 
   useEffect(() => { fetchVideos(); }, [fetchVideos]);
 
-  // Real-time subscription
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -235,7 +256,12 @@ export default function EditorTracker() {
     if (v.status === "Revisions") editorSummary[v.editor_name].revisions++;
   });
 
-  const filteredVideos = filterCreator === "All" ? videos : videos.filter(v => v.creator === filterCreator);
+  const filteredVideos = filterCreator === "All"
+    ? videos
+    : filterCreator === "Personal Branding"
+    ? videos.filter(v => v.video_type === "Personal Branding")
+    : videos.filter(v => v.creator === filterCreator);
+
   const inReviewAll = videos.filter(v => v.status === "In Review");
   const editorName = user.user_metadata?.display_name || user.email;
 
@@ -256,7 +282,6 @@ export default function EditorTracker() {
     row: { display: "flex", gap: 16, marginBottom: 16 },
     col: { flex: 1 },
     sectionTitle: { fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#555", textTransform: "uppercase", marginBottom: 20, paddingBottom: 12, borderBottom: "1px solid #1a1a1a" },
-    videoCard: { background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: "18px 20px", marginBottom: 12 },
     statusSelect: { background: "#111", border: "1px solid #222", borderRadius: 6, padding: "6px 10px", color: "#e8e4dc", fontSize: 12, outline: "none" },
     textarea: { width: "100%", background: "#111", border: "1px solid #222", borderRadius: 6, padding: "10px 12px", color: "#888", fontSize: 12, resize: "vertical", minHeight: 60, outline: "none", marginTop: 8, boxSizing: "border-box" },
     summaryCard: { background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: "20px 24px", marginBottom: 12 },
@@ -264,12 +289,11 @@ export default function EditorTracker() {
     payAmount: { fontSize: 22, fontWeight: 800, color: "#e8e4dc" },
     badge: (color) => ({ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: `${color}15`, color, border: `1px solid ${color}30` }),
     toast: (type) => ({ position: "fixed", bottom: 24, right: 24, background: type === "error" ? "#2a0a0a" : "#0a2a1a", border: `1px solid ${type === "error" ? "#5a1a1a" : "#1a5a3a"}`, color: type === "error" ? "#ff6b6b" : "#4aff9f", padding: "14px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600, zIndex: 999 }),
-    filterBtn: (active) => ({ padding: "6px 14px", borderRadius: 6, border: `1px solid ${active ? "#e8e4dc" : "#222"}`, cursor: "pointer", fontSize: 11, fontWeight: 600, background: active ? "#e8e4dc" : "transparent", color: active ? "#0d0d0d" : "#555", transition: "all 0.15s" }),
+    filterBtn: (active, orange) => ({ padding: "6px 14px", borderRadius: 6, border: `1px solid ${active ? (orange ? "#FF5C00" : "#e8e4dc") : "#222"}`, cursor: "pointer", fontSize: 11, fontWeight: 600, background: active ? (orange ? "#FF5C00" : "#e8e4dc") : "transparent", color: active ? "#0d0d0d" : (orange ? "#FF5C00" : "#555"), transition: "all 0.15s" }),
     signOut: { padding: "6px 14px", borderRadius: 6, border: "1px solid #222", cursor: "pointer", fontSize: 11, fontWeight: 600, background: "transparent", color: "#555", marginLeft: 8 },
     adminBadge: { fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#4da6ff", background: "#1a2a3a", border: "1px solid #1e3a5a", borderRadius: 4, padding: "2px 8px", marginLeft: 8, textTransform: "uppercase" },
   };
 
-  // Editor-only nav tabs (no Pay Summary for editors)
   const navTabs = isAdmin
     ? [["upload", "Upload"], ["tracker", "Tracker"], ["summary", "Pay Summary"]]
     : [["upload", "Upload"], ["tracker", "My Submissions"]];
@@ -312,7 +336,6 @@ export default function EditorTracker() {
               </div>
             ) : (
               <div style={s.card}>
-                {/* Editor name auto-filled from login */}
                 <div style={{ marginBottom: 16, padding: "12px 14px", background: "#0d0d0d", border: "1px solid #222", borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: "#444", marginBottom: 2, letterSpacing: "0.08em", textTransform: "uppercase" }}>Submitting as</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#e8e4dc" }}>{editorName}</div>
@@ -343,7 +366,7 @@ export default function EditorTracker() {
                     <select style={s.select} value={form.video_type} onChange={e => setForm(f => ({ ...f, video_type: e.target.value }))}>
                       {VIDEO_TYPES.map(t => <option key={t}>{t}</option>)}
                     </select>
-                    <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>Original = $5.00 · Repost edit = $2.50</div>
+                    <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>Original = $5.00 · Repost edit = $2.50 · Personal Branding = $5.00</div>
                   </div>
                 </div>
 
@@ -392,8 +415,11 @@ export default function EditorTracker() {
               {isAdmin && (
                 <div style={{ display: "flex", gap: 6 }}>
                   {["All", "Te Arai", "Lucas"].map(c => (
-                    <button key={c} style={s.filterBtn(filterCreator === c)} onClick={() => setFilterCreator(c)}>{c}</button>
+                    <button key={c} style={s.filterBtn(filterCreator === c, false)} onClick={() => setFilterCreator(c)}>{c}</button>
                   ))}
+                  <button style={s.filterBtn(filterCreator === "Personal Branding", true)} onClick={() => setFilterCreator("Personal Branding")}>
+                    Personal Branding
+                  </button>
                 </div>
               )}
             </div>
@@ -418,7 +444,7 @@ export default function EditorTracker() {
                     <div key={status} style={{ marginBottom: 32 }}>
                       <div style={s.sectionTitle}>{status} · {group.length}</div>
                       {group.map(v => (
-                        <div key={v.id} style={s.videoCard}>
+                        <div key={v.id} style={getVideoCardStyle(v.video_type)}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                             <div>
                               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{v.title}</div>
@@ -426,7 +452,7 @@ export default function EditorTracker() {
                                 <span style={s.badge("#888")}>{v.editor_name}</span>
                                 <span style={s.badge("#4da6ff")}>{v.creator}</span>
                                 <span style={s.badge("#666")}>{v.campaign}</span>
-                                <span style={s.badge(v.video_type === "Repost edit" ? "#a09fff" : "#4aff9f")}>{v.video_type || "Original"}</span>
+                                <span style={s.badge(getVideoBadgeColor(v.video_type))}>{v.video_type || "Original"}</span>
                                 <span style={{ fontSize: 11, color: "#444" }}>{formatDate(v.created_at)}</span>
                               </div>
                             </div>
@@ -451,7 +477,6 @@ export default function EditorTracker() {
                               </div>
                             )}
                           </div>
-                          {/* Feedback — editable by admin, read-only for editors */}
                           <div>
                             <div style={{ fontSize: 11, color: "#444", marginBottom: 4 }}>Feedback</div>
                             {isAdmin ? (
