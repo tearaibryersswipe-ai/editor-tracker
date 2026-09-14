@@ -204,25 +204,26 @@ export default function EditorTracker() {
   }, []);
 
   const handleSubmit = async () => {
-    if (!form.creator || form.creator === "Select creator..." ||
-        !form.campaign || form.campaign === "Select campaign..." ||
-        !form.video_type || form.video_type === "Select type..." ||
-        !form.title || !form.file) {
-      showToast("Please fill in all fields and upload a file.", "error");
-      return;
-    }
-    const editorName = user.user_metadata?.display_name || user.email;
-    const { error } = await supabase.from("submissions").insert([{
-      editor_id: user.id,
-      editor_name: editorName,
-      creator: form.creator,
-      campaign: form.campaign,
-      title: form.title,
-      video_type: form.video_type,
-      status: "In Review",
-      feedback: "",
-      paid: false,
-    }]);
+  const isPersonalBranding = form.video_type === "Personal Branding";
+  if (!form.creator || form.creator === "Select creator..." ||
+      (!isPersonalBranding && (!form.campaign || form.campaign === "Select campaign...")) ||
+      !form.video_type || form.video_type === "Select type..." ||
+      !form.title || !form.file) {
+    showToast("Please fill in all fields and upload a file.", "error");
+    return;
+  }
+  const editorName = user.user_metadata?.display_name || user.email;
+  const { error } = await supabase.from("submissions").insert([{
+    editor_id: user.id,
+    editor_name: editorName,
+    creator: form.creator,
+    campaign: isPersonalBranding ? "Personal Branding" : form.campaign,
+    title: form.title,
+    video_type: form.video_type,
+    status: "In Review",
+    feedback: "",
+    paid: false,
+  }]);
     if (error) { showToast("Submission failed. Try again.", "error"); return; }
     setForm({ creator: "", campaign: "", title: "", video_type: "", file: null });
     setSubmitted(true);
